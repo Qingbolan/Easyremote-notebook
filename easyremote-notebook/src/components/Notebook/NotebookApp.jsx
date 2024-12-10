@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import CodeCell from '../Editor/CodeCell';
 import MarkdownCell from '../Editor/MarkdownCell';
 import FileCell from '../Editor/FileCell';
-import Toolbar from './Toolbar';
 import Sidebar from './OutlineSidebar';
 import ErrorAlert from '../UI/ErrorAlert';
 import { Bot, PlusCircle, Play, Save, MenuIcon, ArrowUp, ArrowDown } from 'lucide-react';
