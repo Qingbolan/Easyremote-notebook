@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import { useCallback, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode'
@@ -29,8 +29,10 @@ const CodeCell = ({ cell, onDelete }) => {
     // 模拟接收后端返回的执行结果
     setTimeout(() => {
       const mockOutput = {
-        type: 'text',
-        content: `Executing code for cell ${cell.id}...\nResult: Hello, world!`
+        // type: 'text',
+        // content: `Executing code for cell ${cell.id}...\nResult: Hello, world!`
+        type: 'image',
+        content: "https://raw.githubusercontent.com/Qingbolan/EasyRemote/master/docs/easyremote-logo.png"
       }
       setOutput(mockOutput)
       setIsExecuting(false)
@@ -42,17 +44,18 @@ const CodeCell = ({ cell, onDelete }) => {
   }, [])
 
   return (
-    <div className='pt-4'>
-    <div className={`mb-4 rounded-lg border shadow-sm group ${isExecuting ? 'animate-pulse border-blue-500' : 'bg-gray-800 text-white'}`}>
-      <div className="flex items-center justify-between p-2 bg-gray-700 border-b border-gray-600 rounded-t-lg">
-        <div className="font-mono text-sm text-gray-400">
+    <div>
+    <div className={`mb-4 rounded-lg border shadow-sm group ${isExecuting ? 'animate-pulse border-yellow-800' : 'bg-gradient-to-b from-rose-50/80 to-orange-50/80 -z-20 text-black'}`}>
+      <div className="flex items-center justify-between p-2 
+      border-b border-gray-600 rounded-t-lg">
+        {/* <div className="font-mono text-sm text-gray-400">
           In [{cell.executionCount || ' '}]:
-        </div>
+        </div> */}
         
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={handleExecute}
-            className="p-2 hover:bg-gray-600 rounded"
+            className="p-2 hover:bg-yellow-600 rounded"
             disabled={isExecuting}
           >
             {isExecuting ? (
@@ -63,7 +66,7 @@ const CodeCell = ({ cell, onDelete }) => {
           </button>
           <button
             onClick={handleClearOutput}
-            className="p-2 hover:bg-gray-600 rounded"
+            className="p-2 hover:bg-yellow-600 rounded"
             disabled={!output}
           >
             <X className="w-4 h-4" />
@@ -99,15 +102,15 @@ const CodeCell = ({ cell, onDelete }) => {
         />
         {isExecuting && (
           <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center rounded-b-lg">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <Loader2 className="w-16 h-16 animate-spin text-red-500" />
           </div>
         )}
       </div>
 
       {output && (
-        <div className="p-4 bg-gray-700 border-t rounded-b-lg">
+        <div className="p-4 border-t rounded-b-lg">
           {output.type === 'text' ? (
-            <pre className="font-mono text-sm whitespace-pre-wrap text-gray-300">
+            <pre className="font-mono text-sm whitespace-pre-wrap text-black">
               {output.content}
             </pre>
           ) : output.type === 'image' ? (
