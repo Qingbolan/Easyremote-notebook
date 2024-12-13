@@ -30,32 +30,43 @@ const StatusIcon = memo(({ status }) => {
   return null;
 });
 
-const StepButton = memo(({ step, onClick }) => (
+const StepButton = memo(({ step, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={`
       w-full flex items-center gap-3 px-4 py-3 rounded-lg
       transition-all duration-300 text-lg tracking-wide relative
-      ${step.status === 'in-progress'
+      ${isActive
         ? 'bg-white/10 text-amber-700 shadow-inner shadow-white/10'
         : 'hover:bg-white/5 text-gray-700'}
     `}
   >
     <div className={`
       w-3 h-3 rounded-full flex-shrink-0
-      ${StatusStyles.steps[step.status]}
+      ${isActive ? StatusStyles.steps['in-progress'] : StatusStyles.steps['pending']}
     `} />
-    <span className="font-normal">{step.name}</span>
-    {step.status === 'in-progress' && (
+    <span className="font-normal">{step.title}</span>
+    {isActive && (
       <ArrowRight size={20} className="ml-auto text-amber-600" />
     )}
   </button>
 ));
 
-const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect, isActive }) => {
+const PhaseSection = memo(({ 
+  phase, 
+  isExpanded, 
+  onToggle, 
+  onStepSelect, 
+  isActive,
+  currentStepId 
+}) => {
   const handleStepClick = useCallback((stepId) => {
     onStepSelect(phase.id, stepId);
   }, [phase.id, onStepSelect]);
+
+  // 特殊处理项目介绍和阶段介绍步骤
+  const introStep = phase.steps[0];
+  const regularSteps = phase.steps.slice(1);
 
   return (
     <div className="px-2">
@@ -67,7 +78,7 @@ const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect, isActive
         >
           <div className={`
             w-12 h-12 rounded-xl flex items-center justify-center
-            ${StatusStyles.colors[phase.status]}
+            ${StatusStyles.colors[isActive ? 'in-progress' : 'pending']}
             transition-all duration-300
             before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-b before:from-white/5 before:to-transparent
           `}>
@@ -82,17 +93,27 @@ const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect, isActive
               <ChevronRight size={20} className="text-gray-600" />
             }
           </div>
-          <StatusIcon status={phase.status} />
+          {isActive && <StatusIcon status="in-progress" />}
         </button>
 
         <div className={`
           pl-10 mt-1 overflow-hidden transition-all duration-300
-          ${isExpanded ? 'max-h-96' : 'max-h-0'}
+          ${isExpanded ? 'max-h-[1000px]' : 'max-h-0'}
         `}>
-          {phase.steps.map((step) => (
+          {/* 渲染介绍步骤 */}
+          <StepButton
+            key={introStep.id}
+            step={introStep}
+            isActive={currentStepId === introStep.id}
+            onClick={() => handleStepClick(introStep.id)}
+          />
+          
+          {/* 渲染常规步骤 */}
+          {regularSteps.map((step) => (
             <StepButton
               key={step.id}
               step={step}
+              isActive={currentStepId === step.id}
               onClick={() => handleStepClick(step.id)}
             />
           ))}
@@ -102,7 +123,7 @@ const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect, isActive
   );
 });
 
-const MiniSidebar = memo(({ tasks, currentPhaseId, onPhaseClick }) => (
+const MiniSidebar = memo(({ phases, currentPhaseId, onPhaseClick }) => (
   <div className="w-16 h-full flex flex-col bg-gradient-to-b from-rose-50/80 to-orange-50/80">
     <div className="h-16 flex items-center justify-center border-b border-white/10 bg-white/5">
       <button
@@ -114,32 +135,25 @@ const MiniSidebar = memo(({ tasks, currentPhaseId, onPhaseClick }) => (
       </button>
     </div>
     <div className="flex-1 py-2">
-      {tasks.flatMap(task => task.phases).map((phase) => (
+      {phases.map((phase) => (
         <button
           key={phase.id}
           onClick={() => onPhaseClick(phase.id)}
           className={`
               w-full p-2 flex items-center justify-center
               hover:bg-white/10 transition-all duration-300
-              ${phase.status === 'completed' ? 'text-rose-600' :
-              phase.status === 'in-progress' ? 'text-amber-600' : 'text-gray-400'}
-              ${currentPhaseId === phase.id ? 'bg-white/10' : ''}
+              ${currentPhaseId === phase.id ? 'text-amber-600 bg-white/10' : 'text-gray-400'}
             `}
           title={phase.title}
         >
           <div className={`
               w-10 h-10 rounded-lg flex items-center justify-center
-              ${StatusStyles.colors[phase.status]}
+              ${StatusStyles.colors[currentPhaseId === phase.id ? 'in-progress' : 'pending']}
               transition-all duration-300
               relative
             `}>
             <phase.icon size={24} />
-            {phase.status === 'completed' && (
-              <div className="absolute -top-1 -right-1">
-                <CheckCircle2 size={12} className="text-rose-500" />
-              </div>
-            )}
-            {phase.status === 'in-progress' && (
+            {currentPhaseId === phase.id && (
               <div className="absolute -top-1 -right-1 w-3 h-3">
                 <div className="w-3 h-3 rounded-full bg-amber-500 animate-ping" />
                 <div className="absolute inset-0 w-3 h-3 rounded-full bg-amber-500" />
@@ -155,20 +169,22 @@ const MiniSidebar = memo(({ tasks, currentPhaseId, onPhaseClick }) => (
 const OutlineSidebar = ({
   tasks,
   currentPhaseId,
+  currentStepId,
   isCollapsed,
   onPhaseSelect,
   onToggleCollapse,
   viewMode
 }) => {
-  const [expandedSections, setExpandedSections] = useState(() =>
-    tasks.reduce((acc, task) => ({
-      ...acc,
-      ...task.phases.reduce((phaseAcc, phase) => ({
-        ...phaseAcc,
-        [phase.id]: phase.status === 'in-progress'
-      }), {})
-    }), {})
-  );
+  const [expandedSections, setExpandedSections] = useState(() => {
+    // 默认展开当前阶段
+    const initialState = {};
+    tasks.forEach(task => {
+      task.phases.forEach(phase => {
+        initialState[phase.id] = phase.id === currentPhaseId;
+      });
+    });
+    return initialState;
+  });
 
   const toggleSection = useCallback((sectionId) => {
     setExpandedSections(prev => ({
@@ -181,18 +197,25 @@ const OutlineSidebar = ({
     if (phaseId === null) {
       onToggleCollapse();
     } else {
-      onPhaseSelect(phaseId);
-      setExpandedSections(prev => ({
-        ...prev,
-        [phaseId]: true
-      }));
+      // 当选择一个阶段时，默认选择其介绍步骤
+      const phase = tasks.flatMap(task => task.phases).find(p => p.id === phaseId);
+      if (phase && phase.steps.length > 0) {
+        onPhaseSelect(phaseId, phase.steps[0].id);
+        setExpandedSections(prev => ({
+          ...prev,
+          [phaseId]: true
+        }));
+      }
     }
-  }, [onToggleCollapse, onPhaseSelect]);
+  }, [onToggleCollapse, onPhaseSelect, tasks]);
+
+  // 收集所有阶段用于迷你侧边栏
+  const allPhases = tasks.flatMap(task => task.phases);
 
   if (isCollapsed) {
     return (
       <MiniSidebar
-        tasks={tasks}
+        phases={allPhases}
         currentPhaseId={currentPhaseId}
         onPhaseClick={handlePhaseClick}
       />
@@ -243,7 +266,7 @@ const OutlineSidebar = ({
 
         <div className="py-2">
           {tasks.map((task) => (
-            <div key={task.title} className="mb-6">
+            <div key={task.id} className="mb-6">
               <h2 className="pl-8 px-4 text-2xl font-semibold text-rose-800 mb-2">
                 {task.title}
               </h2>
@@ -255,6 +278,7 @@ const OutlineSidebar = ({
                   onToggle={() => toggleSection(phase.id)}
                   onStepSelect={onPhaseSelect}
                   isActive={currentPhaseId === phase.id}
+                  currentStepId={currentStepId}
                 />
               ))}
             </div>

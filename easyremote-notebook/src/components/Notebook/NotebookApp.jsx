@@ -1,3 +1,4 @@
+// components/NotebookApp.js
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import CodeCell from '../Editor/CodeCell';
 import MarkdownCell from '../Editor/MarkdownCell';
@@ -6,30 +7,36 @@ import OutlineSidebar from './OutlineSidebar';
 import ErrorAlert from '../UI/ErrorAlert';
 import { Play, Save, PlusCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import useStore from '../../store/notebookStore';
+import useMarkdownStore from '../../store/markdownStore'; // 确保正确导入
+import { findCellsByStep } from '../../utils/markdownParser';
 
+// ModeToggle 组件用于切换视图模式
 const ModeToggle = memo(({ viewMode, onModeChange }) => (
   <div className="flex items-center gap-2 rounded-lg">
     <button
       onClick={() => onModeChange('complete')}
-      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${viewMode === 'complete'
-        ? 'bg-white text-orange-600'
-        : 'text-gray-600 hover:bg-gray-200'
-        }`}
+      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${
+        viewMode === 'complete'
+          ? 'bg-white text-orange-600'
+          : 'text-gray-600 hover:bg-gray-200'
+      }`}
     >
       Complete Mode
     </button>
     <button
       onClick={() => onModeChange('step')}
-      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${viewMode === 'step'
-        ? 'bg-white text-yellow-600'
-        : 'text-gray-600 hover:bg-gray-200'
-        }`}
+      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${
+        viewMode === 'step'
+          ? 'bg-white text-yellow-600'
+          : 'text-gray-600 hover:bg-gray-200'
+      }`}
     >
       Step Mode
     </button>
   </div>
 ));
 
+// EmptyState 组件在没有单元格时显示欢迎信息
 const EmptyState = memo(({ onAddCell }) => (
   <div className="flex flex-col items-center justify-center h-full">
     <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-rose-500 to-orange-500 text-transparent bg-clip-text">
@@ -56,6 +63,7 @@ const EmptyState = memo(({ onAddCell }) => (
   </div>
 ));
 
+// CellDivider 组件用于在单元格之间添加分隔符并提供添加新单元格的选项
 const CellDivider = memo(({ index, onAddCell, viewMode }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -87,6 +95,7 @@ const CellDivider = memo(({ index, onAddCell, viewMode }) => {
   );
 });
 
+// StepNavigation 组件用于在 step mode 下导航阶段和步骤
 const StepNavigation = memo(({
   currentPhase,
   currentStepIndex,
@@ -101,29 +110,74 @@ const StepNavigation = memo(({
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
 
+  // 决定显示哪个"上一步"按钮
+  const renderPreviousButton = () => {
+    if (isFirstStep) {
+      // 在第一个步骤时，显示"上一阶段"按钮（如果不是第一个阶段）
+      if (!isFirstPhase) {
+        return (
+          <button
+            onClick={onPreviousPhase}
+            className="flex items-center gap-2 px-6 py-2.5 border-2 border-gray-200 
+              text-rose-600 rounded-lg hover:text-pink-700 transition-colors font-medium"
+          >
+            <ArrowLeft size={20} />
+            Previous Stage
+          </button>
+        );
+      }
+      return null;
+    }
+    
+    // 不是第一个步骤时，显示"上一步"按钮
+    return (
+      <button
+        onClick={onPrevious}
+        className="flex items-center gap-2 px-6 py-2.5 border-2 border-gray-200 
+          text-yellow-700 rounded-lg hover:text-pink-700 transition-colors font-medium"
+      >
+        <ArrowLeft size={20} />
+        Previous Step
+      </button>
+    );
+  };
+
+  // 决定显示哪个"下一步"按钮
+  const renderNextButton = () => {
+    if (isLastStep) {
+      // 在最后一个步骤时，显示"下一阶段"按钮（如果不是最后一个阶段）
+      if (!isLastPhase) {
+        return (
+          <button
+            onClick={onNextPhase}
+            className="flex items-center gap-2 px-6 py-2.5 bg-rose-600 text-white 
+              rounded-lg hover:bg-rose-700 transition-colors font-medium"
+          >
+            Next Stage
+            <ArrowRight size={20} />
+          </button>
+        );
+      }
+      return null;
+    }
+    
+    // 不是最后一个步骤时，显示"下一步"按钮
+    return (
+      <button
+        onClick={onNext}
+        className="flex items-center gap-2 px-6 py-2.5 bg-yellow-600 text-white 
+          rounded-lg hover:bg-rose-700 transition-colors font-medium"
+      >
+        Next Step
+        <ArrowRight size={20} />
+      </button>
+    );
+  };
+
   return (
     <div className="h-20 flex items-center justify-between px-8 bg-white border-t border-gray-200 shadow-lg">
       <div className="flex items-center gap-2">
-        <button
-          onClick={onPreviousPhase}
-          disabled={isFirstPhase}
-          className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 
-            text-rose-600 rounded-lg hover:text-pink-700 disabled:opacity-50 
-            disabled:cursor-not-allowed transition-colors font-medium"
-        >
-          <ArrowLeft size={16} />
-          Prev Stage
-        </button>
-        <button
-          onClick={onPrevious}
-          disabled={isFirstStep}
-          className="flex items-center gap-2 px-6 py-2.5 border-2 border-gray-200 
-            text-yellow-700 rounded-lg hover:text-pink-700 disabled:opacity-50 
-            disabled:cursor-not-allowed transition-colors font-medium"
-        >
-          <ArrowLeft size={20} />
-          上一步
-        </button>
+        {renderPreviousButton()}
       </div>
 
       <div className="flex flex-col items-center gap-2">
@@ -132,39 +186,22 @@ const StepNavigation = memo(({
           {totalSteps > 0 && Array.from({ length: totalSteps }).map((_, idx) => (
             <div
               key={idx}
-              className={`h-2 w-2 rounded-full transition-all duration-400 ${idx === currentStepIndex ? 'bg-orange-600' : 'bg-gray-200'
-                }`}
+              className={`h-2 w-2 rounded-full transition-all duration-400 ${
+                idx === currentStepIndex ? 'bg-orange-600' : 'bg-gray-200'
+              }`}
             />
           ))}
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          onClick={onNext}
-          disabled={isLastStep}
-          className="flex items-center gap-2 px-6 py-2.5 bg-yellow-600 text-white 
-            rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed 
-            transition-colors font-medium"
-        >
-          next step
-          <ArrowRight size={20} />
-        </button>
-        <button
-          onClick={onNextPhase}
-          disabled={isLastPhase}
-          className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white 
-            rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed 
-            transition-colors font-medium"
-        >
-          Next Stage
-          <ArrowRight size={16} />
-        </button>
+        {renderNextButton()}
       </div>
     </div>
   );
 });
 
+// NotebookApp 组件是整个笔记本应用的主组件
 const NotebookApp = () => {
   const [error, setError] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -184,9 +221,14 @@ const NotebookApp = () => {
     setCurrentStepIndex,
     setCurrentCell,
     getCurrentViewCells,
-    getTotalSteps
+    getTotalSteps,
+    runAllCells,
+    saveNotebook
   } = useStore();
 
+  const { setEditingCellId } = useMarkdownStore(); // 获取 setEditingCellId 方法
+
+  // 添加单元格的处理函数
   const handleAddCell = useCallback((type, index = null) => {
     try {
       const newCellId = Date.now().toString();
@@ -206,14 +248,27 @@ const NotebookApp = () => {
     }
   }, [addCell]);
 
+  // 运行所有单元格
   const handleRunAll = useCallback(async () => {
-    // Implement logic to run all code cells
-  }, []);
+    try {
+      await runAllCells();
+    } catch (err) {
+      console.error('Error running all cells:', err);
+      setError('Failed to run all cells. Please try again.');
+    }
+  }, [runAllCells]);
 
+  // 保存笔记本
   const handleSave = useCallback(async () => {
-    // Implement logic to save notebook
-  }, []);
+    try {
+      await saveNotebook();
+    } catch (err) {
+      console.error('Error saving notebook:', err);
+      setError('Failed to save notebook. Please try again.');
+    }
+  }, [saveNotebook]);
 
+  // 查找当前阶段的索引
   const findPhaseIndex = useCallback(() => {
     for (const task of tasks) {
       const phaseIndex = task.phases.findIndex(p => p.id === currentPhaseId);
@@ -224,6 +279,7 @@ const NotebookApp = () => {
     return null;
   }, [tasks, currentPhaseId]);
 
+  // 处理切换到前一个阶段
   const handlePreviousPhase = useCallback(() => {
     const result = findPhaseIndex();
     if (result) {
@@ -236,6 +292,7 @@ const NotebookApp = () => {
     }
   }, [findPhaseIndex, setCurrentPhase, setCurrentStepIndex]);
 
+  // 处理切换到下一个阶段
   const handleNextPhase = useCallback(() => {
     const result = findPhaseIndex();
     if (result) {
@@ -248,12 +305,14 @@ const NotebookApp = () => {
     }
   }, [findPhaseIndex, setCurrentPhase, setCurrentStepIndex]);
 
+  // 处理切换到前一个步骤
   const handlePreviousStep = useCallback(() => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(currentStepIndex - 1);
     }
   }, [currentStepIndex, setCurrentStepIndex]);
 
+  // 处理切换到下一个步骤
   const handleNextStep = useCallback(() => {
     const totalSteps = getTotalSteps();
     if (currentStepIndex < totalSteps - 1) {
@@ -261,9 +320,10 @@ const NotebookApp = () => {
     }
   }, [currentStepIndex, getTotalSteps, setCurrentStepIndex]);
 
+  // 处理视图模式切换
   const handleModeChange = useCallback((mode) => {
     if (mode === 'step' && !currentPhaseId && tasks.length > 0) {
-      // If switching to step mode and no phase is selected, select the first available phase
+      // 如果切换到步骤模式且没有选中的阶段，选择第一个可用的阶段
       const firstTask = tasks[0];
       if (firstTask.phases.length > 0) {
         setCurrentPhase(firstTask.phases[0].id);
@@ -271,13 +331,15 @@ const NotebookApp = () => {
     }
     setViewMode(mode);
     setCurrentCell(null);
-  }, [setViewMode, setCurrentCell, setCurrentPhase, tasks, currentPhaseId]);
+    setEditingCellId(null); // 切换视图模式时清除编辑状态
+  }, [setViewMode, setCurrentCell, setCurrentPhase, tasks, currentPhaseId, setEditingCellId]);
 
+  // 渲染单元格
   const renderCell = useCallback((cell) => {
     if (!cell) return null;
 
-    const commonProps = {
-      key: cell.id,
+    // 从 commonProps 中移除 key
+    const { key, ...otherProps } = {
       cell,
       onDelete: viewMode === 'complete' ? deleteCell : null,
       onUpdate: updateCell,
@@ -288,16 +350,17 @@ const NotebookApp = () => {
 
     switch (cell.type) {
       case 'code':
-        return <CodeCell {...commonProps} />;
+        return <CodeCell key={cell.id} {...otherProps} />;
       case 'markdown':
-        return <MarkdownCell {...commonProps} />;
+        return <MarkdownCell key={cell.id} {...otherProps} />;
       case 'file':
-        return <FileCell {...commonProps} />;
+        return <FileCell key={cell.id} {...otherProps} />;
       default:
         return null;
     }
   }, [viewMode, deleteCell, updateCell]);
 
+  // 渲染步骤导航
   const renderStepNavigation = useCallback(() => {
     const result = findPhaseIndex();
     if (!result) return null;
@@ -330,20 +393,48 @@ const NotebookApp = () => {
     handleNextPhase
   ]);
 
+  // 渲染内容
   const renderContent = useCallback(() => {
     if (cells.length === 0) {
       return <EmptyState onAddCell={handleAddCell} />;
     }
 
-    const visibleCells = getCurrentViewCells();
+    if (viewMode === 'step') {
+      if (!currentPhaseId) {
+        return <div className="text-center text-gray-500">请选择一个阶段</div>;
+      }
 
-    if (viewMode === 'step' && currentPhaseId) {
+      // 获取当前阶段的信息
+      const phase = tasks.find(task => task.phases.some(p => p.id === currentPhaseId))
+        ?.phases.find(p => p.id === currentPhaseId);
+
+      if (!phase) {
+        console.warn(`Phase with id "${currentPhaseId}" not found.`);
+        console.log('Available phases:', tasks.flatMap(task => task.phases.map(p => p.id)));
+        return <div className="text-center text-gray-500">当前阶段不存在</div>;
+      }
+
+      const currentStep = phase.steps[currentStepIndex];
+
+      if (!currentStep) {
+        console.warn(`Step with index "${currentStepIndex}" not found in phase "${currentPhaseId}".`);
+        return <div className="text-center text-gray-500">当前步骤不存在</div>;
+      }
+
+      // 获取当前步骤的单元格
+      const stepCells = findCellsByStep(tasks, currentPhaseId, currentStep.id, cells);
+
+      if (stepCells.length === 0) {
+        console.warn(`No cells found for step "${currentStep.id}" in phase "${currentPhaseId}".`);
+        return <div className="text-center text-gray-500">当前步骤没有单元格</div>;
+      }
+
       return (
         <div className="h-full flex flex-col">
           <div className="flex-1 overflow-y-auto p-12">
             <div className="w-full max-w-screen-xl mx-auto">
               <div className="relative space-y-4">
-                {visibleCells.map((cell) => (
+                {stepCells.map((cell) => (
                   <div
                     key={cell.id}
                     id={`cell-${cell.id}`}
@@ -360,10 +451,14 @@ const NotebookApp = () => {
       );
     }
 
+    // Complete Mode
+    const visibleCells = getCurrentViewCells();
+
     return (
       <div className="w-full max-w-screen-xl mx-auto px-4 lg:px-8">
         <div className="relative space-y-4">
-          <empty className='h-4 w-full'></empty>
+          {/* 使用 <div> 代替无效的 <empty> 标签 */}
+          <div className='h-4 w-full'></div>
           <CellDivider index={0} onAddCell={handleAddCell} viewMode={viewMode} />
           {visibleCells.map((cell, index) => (
             <React.Fragment key={cell.id}>
@@ -387,12 +482,17 @@ const NotebookApp = () => {
     cells.length,
     viewMode,
     currentPhaseId,
+    currentStepIndex,
+    tasks,
     getCurrentViewCells,
     handleAddCell,
     renderCell,
-    renderStepNavigation
+    renderStepNavigation,
+    findPhaseIndex,
+    findCellsByStep
   ]);
 
+  // 滚动到最后添加的单元格
   useEffect(() => {
     if (lastAddedCellId) {
       const cellElement = document.getElementById(`cell-${lastAddedCellId}`);
@@ -401,16 +501,53 @@ const NotebookApp = () => {
     }
   }, [lastAddedCellId]);
 
-  // Effect to handle initial phase selection when switching to step mode
+  // Add keyboard event handler for navigation and mode switching
   useEffect(() => {
-    if (viewMode === 'step' && !currentPhaseId && tasks.length > 0) {
-      const firstTask = tasks[0];
-      if (firstTask.phases.length > 0) {
-        setCurrentPhase(firstTask.phases[0].id);
-        setCurrentStepIndex(0);
+    const handleKeyDown = (e) => {
+      // Alt + Left Arrow for previous step/phase
+      if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (viewMode === 'step') {
+          if (currentStepIndex > 0) {
+            handlePreviousStep();
+          } else {
+            handlePreviousPhase();
+          }
+        }
       }
-    }
-  }, [viewMode, currentPhaseId, tasks, setCurrentPhase, setCurrentStepIndex]);
+      
+      // Alt + Right Arrow for next step/phase
+      if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (viewMode === 'step') {
+          const totalSteps = getTotalSteps();
+          if (currentStepIndex < totalSteps - 1) {
+            handleNextStep();
+          } else {
+            handleNextPhase();
+          }
+        }
+      }
+
+      // Alt + Ctrl for mode switching
+      if (e.altKey && e.ctrlKey) {
+        e.preventDefault();
+        handleModeChange(viewMode === 'complete' ? 'step' : 'complete');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    viewMode,
+    currentStepIndex,
+    handlePreviousStep,
+    handleNextStep,
+    handlePreviousPhase,
+    handleNextPhase,
+    handleModeChange,
+    getTotalSteps
+  ]);
 
   return (
     <div className="h-screen flex bg-white">

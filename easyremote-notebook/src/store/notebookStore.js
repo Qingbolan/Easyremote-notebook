@@ -16,9 +16,9 @@ const useStore = create((set, get) => ({
     const updatedCells = [...state.cells];
     const targetIndex = index === null ? updatedCells.length : index;
     updatedCells.splice(targetIndex, 0, newCell);
-    
+
     const tasks = parseMarkdownCells(updatedCells);
-    
+
     return { 
       cells: updatedCells,
       tasks 
@@ -28,7 +28,7 @@ const useStore = create((set, get) => ({
   deleteCell: (cellId) => set(state => {
     const updatedCells = state.cells.filter(cell => cell.id !== cellId);
     const tasks = parseMarkdownCells(updatedCells);
-    
+
     // 如果删除的是当前阶段的最后一个单元格，清除当前阶段
     const currentPhaseCells = findCellsByPhase(tasks, state.currentPhaseId);
     if (currentPhaseCells.length === 0) {
@@ -39,7 +39,16 @@ const useStore = create((set, get) => ({
         currentStepIndex: 0
       };
     }
-    
+
+    // 如果删除的单元格是当前选中的单元格，清除 currentCellId
+    if (state.currentCellId === cellId) {
+      return { 
+        cells: updatedCells,
+        tasks,
+        currentCellId: null
+      };
+    }
+
     return { 
       cells: updatedCells,
       tasks 
@@ -50,9 +59,9 @@ const useStore = create((set, get) => ({
     const updatedCells = state.cells.map(cell => 
       cell.id === cellId ? { ...cell, content: newContent } : cell
     );
-    
+
     const tasks = parseMarkdownCells(updatedCells);
-    
+
     return { 
       cells: updatedCells,
       tasks 
@@ -76,7 +85,7 @@ const useStore = create((set, get) => ({
       // Complete 模式时重置步骤索引
       updates.currentStepIndex = 0;
     }
-    
+
     return updates;
   }),
 
@@ -154,35 +163,76 @@ const useStore = create((set, get) => ({
   // 导航方法
   navigateToNextPhase: () => {
     const state = get();
-    const phaseInfo = get().getCurrentPhaseInfo();
+    const phaseInfo = state.getCurrentPhaseInfo();
     if (!phaseInfo || phaseInfo.isLastPhase) return;
 
-    const nextPhase = phaseInfo.task.phases[phaseInfo.task.phases.indexOf(phaseInfo.phase) + 1];
-    set({
-      currentPhaseId: nextPhase.id,
-      currentStepIndex: 0
-    });
+    // 使用 findIndex 确保正确获取阶段索引
+    const currentPhaseIndex = phaseInfo.task.phases.findIndex(p => p.id === phaseInfo.phase.id);
+    const nextPhase = phaseInfo.task.phases[currentPhaseIndex + 1];
+    if (nextPhase) {
+      set({
+        currentPhaseId: nextPhase.id,
+        currentStepIndex: 0
+      });
+    }
   },
 
   navigateToPreviousPhase: () => {
     const state = get();
-    const phaseInfo = get().getCurrentPhaseInfo();
+    const phaseInfo = state.getCurrentPhaseInfo();
     if (!phaseInfo || phaseInfo.isFirstPhase) return;
 
-    const previousPhase = phaseInfo.task.phases[phaseInfo.task.phases.indexOf(phaseInfo.phase) - 1];
-    set({
-      currentPhaseId: previousPhase.id,
-      currentStepIndex: 0
-    });
+    // 使用 findIndex 确保正确获取阶段索引
+    const currentPhaseIndex = phaseInfo.task.phases.findIndex(p => p.id === phaseInfo.phase.id);
+    const previousPhase = phaseInfo.task.phases[currentPhaseIndex - 1];
+    if (previousPhase) {
+      set({
+        currentPhaseId: previousPhase.id,
+        currentStepIndex: 0
+      });
+    }
   },
 
-  // 运行和保存相关方法
+  // 运行所有单元格的逻辑
   runAllCells: async () => {
-    // TODO: 实现运行所有单元格的逻辑
+    try {
+      const state = get();
+      const codeCells = state.cells.filter(cell => cell.type === 'code');
+
+      for (const cell of codeCells) {
+        // 假设有一个执行代码的API或方法
+        // 这里使用一个模拟的执行过程
+        // 您需要根据实际情况替换此部分
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟延迟
+
+        // 更新单元格的输出
+        set(state => ({
+          cells: state.cells.map(c => 
+            c.id === cell.id ? { ...c, output: { type: 'text', content: 'Execution result...' } } : c
+          )
+        }));
+      }
+    } catch (error) {
+      console.error('运行所有单元格时出错:', error);
+      // 您可以在这里设置错误状态以在UI中显示
+    }
   },
 
+  // 保存笔记本的逻辑
   saveNotebook: async () => {
-    // TODO: 实现保存笔记本的逻辑
+    try {
+      const state = get();
+      // 假设有一个保存笔记本的API
+      // 这里使用一个模拟的保存过程
+      // 您需要根据实际情况替换此部分
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟延迟
+
+      console.log('Notebook saved successfully:', state.cells);
+      // 您可以在这里设置成功状态以在UI中显示
+    } catch (error) {
+      console.error('保存笔记本时出错:', error);
+      // 您可以在这里设置错误状态以在UI中显示
+    }
   }
 }));
 
