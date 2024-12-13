@@ -1,76 +1,11 @@
-// Sidebar.jsx
 import React, { useState, useCallback, memo } from 'react';
 import {
-  Database,
-  FileSearch,
-  GitBranch,
-  Binary,
-  LineChart,
-  CheckCircle2,
-  ArrowRight,
   MenuIcon,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ArrowRight,
+  CheckCircle2
 } from 'lucide-react';
-
-
-const ProcessSteps = [
-  {
-    id: 'data-prep',
-    title: 'Data Preparation',
-    icon: Database,
-    status: 'completed',
-    steps: [
-      { id: 'load', name: 'Load Data', status: 'completed' },
-      { id: 'explore', name: 'Data Exploration', status: 'completed' },
-      { id: 'clean', name: 'Data Cleaning', status: 'completed' }
-    ]
-  },
-  {
-    id: 'eda',
-    title: 'Exploratory Analysis',
-    icon: FileSearch,
-    status: 'in-progress',
-    steps: [
-      { id: 'stats', name: 'Statistical Analysis', status: 'completed' },
-      { id: 'viz', name: 'Data Visualization', status: 'in-progress' },
-      { id: 'hypothesis', name: 'Hypothesis Testing', status: 'pending' }
-    ]
-  },
-  {
-    id: 'feature-eng',
-    title: 'Feature Engineering',
-    icon: GitBranch,
-    status: 'pending',
-    steps: [
-      { id: 'transform', name: 'Feature Transformation', status: 'pending' },
-      { id: 'select', name: 'Feature Selection', status: 'pending' },
-      { id: 'create', name: 'Feature Creation', status: 'pending' }
-    ]
-  },
-  {
-    id: 'modeling',
-    title: 'Model Training',
-    icon: Binary,
-    status: 'pending',
-    steps: [
-      { id: 'split', name: 'Data Split', status: 'pending' },
-      { id: 'train', name: 'Model Training', status: 'pending' },
-      { id: 'tune', name: 'Parameter Tuning', status: 'pending' }
-    ]
-  },
-  {
-    id: 'evaluation',
-    title: 'Model Evaluation',
-    icon: LineChart,
-    status: 'pending',
-    steps: [
-      { id: 'metrics', name: 'Evaluation Metrics', status: 'pending' },
-      { id: 'validate', name: 'Cross Validation', status: 'pending' },
-      { id: 'compare', name: 'Model Comparison', status: 'pending' }
-    ]
-  }
-];
 
 const StatusStyles = {
   colors: {
@@ -117,7 +52,7 @@ const StepButton = memo(({ step, onClick }) => (
   </button>
 ));
 
-const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect }) => {
+const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect, isActive }) => {
   const handleStepClick = useCallback((stepId) => {
     onStepSelect(phase.id, stepId);
   }, [phase.id, onStepSelect]);
@@ -127,7 +62,8 @@ const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect }) => {
       <div className="rounded-xl transition-all duration-300">
         <button
           onClick={onToggle}
-          className="w-full flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg transition-all duration-300 relative group"
+          className={`w-full flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg transition-all duration-300 relative group
+            ${isActive ? 'bg-white/10' : ''}`}
         >
           <div className={`
             w-12 h-12 rounded-xl flex items-center justify-center
@@ -166,8 +102,7 @@ const PhaseSection = memo(({ phase, isExpanded, onToggle, onStepSelect }) => {
   );
 });
 
-
-const MiniSidebar = memo(({ currentPhase, onPhaseClick }) => (
+const MiniSidebar = memo(({ tasks, currentPhaseId, onPhaseClick }) => (
   <div className="w-16 h-full flex flex-col bg-gradient-to-b from-rose-50/80 to-orange-50/80">
     <div className="h-16 flex items-center justify-center border-b border-white/10 bg-white/5">
       <button
@@ -179,25 +114,25 @@ const MiniSidebar = memo(({ currentPhase, onPhaseClick }) => (
       </button>
     </div>
     <div className="flex-1 py-2">
-      {ProcessSteps.map((phase) => (
+      {tasks.flatMap(task => task.phases).map((phase) => (
         <button
           key={phase.id}
           onClick={() => onPhaseClick(phase.id)}
           className={`
-            w-full p-2 flex items-center justify-center
-            hover:bg-white/10 transition-all duration-300
-            ${phase.status === 'completed' ? 'text-rose-600' : 
+              w-full p-2 flex items-center justify-center
+              hover:bg-white/10 transition-all duration-300
+              ${phase.status === 'completed' ? 'text-rose-600' :
               phase.status === 'in-progress' ? 'text-amber-600' : 'text-gray-400'}
-            ${currentPhase === phase.id ? 'bg-white/10' : ''}
-          `}
+              ${currentPhaseId === phase.id ? 'bg-white/10' : ''}
+            `}
           title={phase.title}
         >
           <div className={`
-            w-10 h-10 rounded-lg flex items-center justify-center
-            ${StatusStyles.colors[phase.status]}
-            transition-all duration-300
-            relative
-          `}>
+              w-10 h-10 rounded-lg flex items-center justify-center
+              ${StatusStyles.colors[phase.status]}
+              transition-all duration-300
+              relative
+            `}>
             <phase.icon size={24} />
             {phase.status === 'completed' && (
               <div className="absolute -top-1 -right-1">
@@ -217,14 +152,23 @@ const MiniSidebar = memo(({ currentPhase, onPhaseClick }) => (
   </div>
 ));
 
-const OutlineSidebar = ({ isCollapsed, currentStep, onStepSelect, onToggleCollapse }) => {
-  const [expandedSections, setExpandedSections] = useState(() => 
-    ProcessSteps.reduce((acc, phase) => {
-      acc[phase.id] = phase.status === 'in-progress';
-      return acc;
-    }, {})
+const OutlineSidebar = ({
+  tasks,
+  currentPhaseId,
+  isCollapsed,
+  onPhaseSelect,
+  onToggleCollapse,
+  viewMode
+}) => {
+  const [expandedSections, setExpandedSections] = useState(() =>
+    tasks.reduce((acc, task) => ({
+      ...acc,
+      ...task.phases.reduce((phaseAcc, phase) => ({
+        ...phaseAcc,
+        [phase.id]: phase.status === 'in-progress'
+      }), {})
+    }), {})
   );
-  const [currentPhase, setCurrentPhase] = useState(null);
 
   const toggleSection = useCallback((sectionId) => {
     setExpandedSections(prev => ({
@@ -237,16 +181,22 @@ const OutlineSidebar = ({ isCollapsed, currentStep, onStepSelect, onToggleCollap
     if (phaseId === null) {
       onToggleCollapse();
     } else {
-      setCurrentPhase(phaseId);
+      onPhaseSelect(phaseId);
       setExpandedSections(prev => ({
         ...prev,
         [phaseId]: true
       }));
     }
-  }, [onToggleCollapse]);
+  }, [onToggleCollapse, onPhaseSelect]);
 
   if (isCollapsed) {
-    return <MiniSidebar currentPhase={currentPhase} onPhaseClick={handlePhaseClick} />;
+    return (
+      <MiniSidebar
+        tasks={tasks}
+        currentPhaseId={currentPhaseId}
+        onPhaseClick={handlePhaseClick}
+      />
+    );
   }
 
   return (
@@ -257,7 +207,7 @@ const OutlineSidebar = ({ isCollapsed, currentStep, onStepSelect, onToggleCollap
       <div className="absolute inset-0 backdrop-blur-[8px] backdrop-saturate-150 -z-10" />
       <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent shadow-inner -z-10" />
 
-      {/* Header with MenuIcon */}
+      {/* Header */}
       <div className="h-16 flex items-center px-6 border-b border-white/10 bg-white/5 backdrop-blur-sm relative">
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent" />
         <button
@@ -292,24 +242,36 @@ const OutlineSidebar = ({ isCollapsed, currentStep, onStepSelect, onToggleCollap
         `}</style>
 
         <div className="py-2">
-          {ProcessSteps.map((phase) => (
-            <PhaseSection
-              key={phase.id}
-              phase={phase}
-              isExpanded={expandedSections[phase.id]}
-              onToggle={() => toggleSection(phase.id)}
-              onStepSelect={onStepSelect}
-            />
+          {tasks.map((task) => (
+            <div key={task.title} className="mb-6">
+              <h2 className="pl-8 px-4 text-2xl font-semibold text-rose-800 mb-2">
+                {task.title}
+              </h2>
+              {task.phases.map((phase) => (
+                <PhaseSection
+                  key={phase.id}
+                  phase={phase}
+                  isExpanded={expandedSections[phase.id]}
+                  onToggle={() => toggleSection(phase.id)}
+                  onStepSelect={onPhaseSelect}
+                  isActive={currentPhaseId === phase.id}
+                />
+              ))}
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="h-16 px-4 flex items-center border-t border-white/10 bg-white/5 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent" />
-        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 mr-3 animate-pulse shadow-lg" />
-        <span className="text-lg font-medium tracking-wide text-amber-700 relative">Analysis in Progress</span>
-      </div>
+      {/* Footer status */}
+      {viewMode === 'step' && currentPhaseId && (
+        <div className="h-16 px-4 flex items-center border-t border-white/10 bg-white/5 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent" />
+          <div className="w-3 h-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-400 mr-3 animate-pulse shadow-lg" />
+          <span className="text-lg font-medium tracking-wide text-amber-700 relative">
+            Working on current phase
+          </span>
+        </div>
+      )}
     </div>
   );
 };

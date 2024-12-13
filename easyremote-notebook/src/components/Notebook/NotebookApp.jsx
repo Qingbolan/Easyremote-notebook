@@ -1,32 +1,29 @@
-// NotebookApp.jsx
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import CodeCell from '../Editor/CodeCell';
 import MarkdownCell from '../Editor/MarkdownCell';
 import FileCell from '../Editor/FileCell';
 import OutlineSidebar from './OutlineSidebar';
 import ErrorAlert from '../UI/ErrorAlert';
-import { Play, Save, MenuIcon, PlusCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Play, Save, PlusCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import useStore from '../../store/notebookStore';
 
 const ModeToggle = memo(({ viewMode, onModeChange }) => (
   <div className="flex items-center gap-2 rounded-lg">
     <button
       onClick={() => onModeChange('complete')}
-      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${
-        viewMode === 'complete'
-          ? 'bg-white text-orange-600'
-          : 'text-gray-600 hover:bg-gray-200'
-      }`}
+      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${viewMode === 'complete'
+        ? 'bg-white text-orange-600'
+        : 'text-gray-600 hover:bg-gray-200'
+        }`}
     >
       Complete Mode
     </button>
     <button
       onClick={() => onModeChange('step')}
-      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${
-        viewMode === 'step'
-          ? 'bg-white text-yellow-600'
-          : 'text-gray-600 hover:bg-gray-200'
-      }`}
+      className={`px-4 py-2 rounded-md text-lg font-medium transition-colors ${viewMode === 'step'
+        ? 'bg-white text-yellow-600'
+        : 'text-gray-600 hover:bg-gray-200'
+        }`}
     >
       Step Mode
     </button>
@@ -35,28 +32,25 @@ const ModeToggle = memo(({ viewMode, onModeChange }) => (
 
 const EmptyState = memo(({ onAddCell }) => (
   <div className="flex flex-col items-center justify-center h-full">
-    <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-rose-500 to-orange-500 
-      text-transparent bg-clip-text">
+    <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-rose-500 to-orange-500 text-transparent bg-clip-text">
       WELCOME Easyremote-NoteBook
     </h1>
     <span className="text-gray-400 text-base mb-5">@silan.tech</span>
-    <p className="text-gray-500 text-lg mb-6">No cells yet. Start by adding one!</p>
+    <p className="text-gray-500 text-lg mb-6">Start your data science journey by adding cells!</p>
     <div className="flex gap-4">
       <button
+        onClick={() => onAddCell('markdown')}
+        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-lg font-medium rounded-lg hover:opacity-90 transition-all"
+      >
+        <PlusCircle size={24} />
+        Add Title & Steps
+      </button>
+      <button
         onClick={() => onAddCell('code')}
-        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 
-          text-white text-lg font-medium rounded-lg hover:opacity-90 transition-all"
+        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 text-white text-lg font-medium rounded-lg hover:opacity-90 transition-all"
       >
         <PlusCircle size={24} />
         Add Code Cell
-      </button>
-      <button
-        onClick={() => onAddCell('markdown')}
-        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-orange-500 
-          text-white text-lg font-medium rounded-lg hover:opacity-90 transition-all"
-      >
-        <PlusCircle size={24} />
-        Add Text Cell
       </button>
     </div>
   </div>
@@ -72,20 +66,17 @@ const CellDivider = memo(({ index, onAddCell, viewMode }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {isHovered && viewMode === 'complete' && (
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 
-          flex items-center gap-2 bg-white shadow-lg rounded-lg p-1 z-10">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 bg-white shadow-lg rounded-lg p-1 z-10">
           <button
             onClick={() => onAddCell('code', index)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 
-              hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             <PlusCircle size={16} />
             Add Code Cell
           </button>
           <button
             onClick={() => onAddCell('markdown', index)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 
-              hover:bg-gray-100 rounded-md transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             <PlusCircle size={16} />
             Add Text Cell
@@ -96,78 +87,124 @@ const CellDivider = memo(({ index, onAddCell, viewMode }) => {
   );
 });
 
-const StepNavigation = memo(({ currentStep, totalSteps, onPrevious, onNext }) => (
-  <div className="h-20 flex items-center justify-between px-8 bg-white border-t border-gray-200 shadow-lg">
-    <button
-      onClick={onPrevious}
-      disabled={currentStep === 0}
-      className="flex items-center gap-2 px-6 py-2.5 border-2 border-gray-200 
-        text-yellow-700 rounded-lg hover:text-pink-700 disabled:opacity-50 
-        disabled:cursor-not-allowed transition-colors font-medium"
-    >
-      <ArrowLeft size={20} />
-      Previous Step
-    </button>
-    <div className="flex items-center gap-3">
-      {totalSteps > 0 && Array.from({ length: totalSteps }).map((_, idx) => (
-        <div
-          key={idx}
-          className={`h-2 w-2 rounded-full transition-all duration-400 ${
-            idx <= currentStep ? 'bg-orange-600' : 'bg-gray-200'
-          }`}
-        />
-      ))}
+const StepNavigation = memo(({
+  currentPhase,
+  currentStepIndex,
+  totalSteps,
+  onPrevious,
+  onNext,
+  onPreviousPhase,
+  onNextPhase,
+  isFirstPhase,
+  isLastPhase
+}) => {
+  const isFirstStep = currentStepIndex === 0;
+  const isLastStep = currentStepIndex === totalSteps - 1;
+
+  return (
+    <div className="h-20 flex items-center justify-between px-8 bg-white border-t border-gray-200 shadow-lg">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onPreviousPhase}
+          disabled={isFirstPhase}
+          className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-200 
+            text-rose-600 rounded-lg hover:text-pink-700 disabled:opacity-50 
+            disabled:cursor-not-allowed transition-colors font-medium"
+        >
+          <ArrowLeft size={16} />
+          Prev Stage
+        </button>
+        <button
+          onClick={onPrevious}
+          disabled={isFirstStep}
+          className="flex items-center gap-2 px-6 py-2.5 border-2 border-gray-200 
+            text-yellow-700 rounded-lg hover:text-pink-700 disabled:opacity-50 
+            disabled:cursor-not-allowed transition-colors font-medium"
+        >
+          <ArrowLeft size={20} />
+          上一步
+        </button>
+      </div>
+
+      <div className="flex flex-col items-center gap-2">
+        <span className="text-lg font-medium text-gray-700">{currentPhase?.title}</span>
+        <div className="flex items-center gap-3">
+          {totalSteps > 0 && Array.from({ length: totalSteps }).map((_, idx) => (
+            <div
+              key={idx}
+              className={`h-2 w-2 rounded-full transition-all duration-400 ${idx === currentStepIndex ? 'bg-orange-600' : 'bg-gray-200'
+                }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onNext}
+          disabled={isLastStep}
+          className="flex items-center gap-2 px-6 py-2.5 bg-yellow-600 text-white 
+            rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed 
+            transition-colors font-medium"
+        >
+          next step
+          <ArrowRight size={20} />
+        </button>
+        <button
+          onClick={onNextPhase}
+          disabled={isLastPhase}
+          className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white 
+            rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed 
+            transition-colors font-medium"
+        >
+          Next Stage
+          <ArrowRight size={16} />
+        </button>
+      </div>
     </div>
-    <button
-      onClick={onNext}
-      disabled={currentStep === totalSteps - 1}
-      className="flex items-center gap-2 px-6 py-2.5 bg-yellow-600 text-white 
-        rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed 
-        transition-colors font-medium"
-    >
-      Next Step
-      <ArrowRight size={20} />
-    </button>
-  </div>
-));
+  );
+});
 
 const NotebookApp = () => {
   const [error, setError] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [viewMode, setViewMode] = useState('complete');
-  const [currentStep, setCurrentStep] = useState(0);
-  const { cells = [], addCell, deleteCell, updateCell } = useStore();
   const [lastAddedCellId, setLastAddedCellId] = useState(null);
 
-  // 监听 cells 变化，确保 currentStep 在有效范围内
-  useEffect(() => {
-    if (cells.length === 0) {
-      setCurrentStep(0);
-    } else if (currentStep >= cells.length) {
-      setCurrentStep(cells.length - 1);
-    }
-  }, [cells.length, currentStep]);
+  const {
+    cells,
+    tasks,
+    viewMode,
+    currentPhaseId,
+    currentStepIndex,
+    addCell,
+    deleteCell,
+    updateCell,
+    setViewMode,
+    setCurrentPhase,
+    setCurrentStepIndex,
+    setCurrentCell,
+    getCurrentViewCells,
+    getTotalSteps
+  } = useStore();
 
   const handleAddCell = useCallback((type, index = null) => {
     try {
       const newCellId = Date.now().toString();
-      const targetIndex = index !== null ? index : cells.length;
-      
       const newCell = {
         id: newCellId,
         type,
         content: '',
         output: null,
-        isNewCell: true // 添加标记
+        isNewCell: true
       };
-      
-      addCell(newCell, targetIndex);
+
+      addCell(newCell, index);
       setLastAddedCellId(newCellId);
     } catch (err) {
       console.error('Error adding cell:', err);
       setError('Failed to add cell. Please try again.');
     }
-  }, [cells.length, addCell]);
+  }, [addCell]);
 
   const handleRunAll = useCallback(async () => {
     // Implement logic to run all code cells
@@ -177,22 +214,64 @@ const NotebookApp = () => {
     // Implement logic to save notebook
   }, []);
 
+  const findPhaseIndex = useCallback(() => {
+    for (const task of tasks) {
+      const phaseIndex = task.phases.findIndex(p => p.id === currentPhaseId);
+      if (phaseIndex !== -1) {
+        return { task, phaseIndex };
+      }
+    }
+    return null;
+  }, [tasks, currentPhaseId]);
+
+  const handlePreviousPhase = useCallback(() => {
+    const result = findPhaseIndex();
+    if (result) {
+      const { task, phaseIndex } = result;
+      if (phaseIndex > 0) {
+        const previousPhase = task.phases[phaseIndex - 1];
+        setCurrentPhase(previousPhase.id);
+        setCurrentStepIndex(0);
+      }
+    }
+  }, [findPhaseIndex, setCurrentPhase, setCurrentStepIndex]);
+
+  const handleNextPhase = useCallback(() => {
+    const result = findPhaseIndex();
+    if (result) {
+      const { task, phaseIndex } = result;
+      if (phaseIndex < task.phases.length - 1) {
+        const nextPhase = task.phases[phaseIndex + 1];
+        setCurrentPhase(nextPhase.id);
+        setCurrentStepIndex(0);
+      }
+    }
+  }, [findPhaseIndex, setCurrentPhase, setCurrentStepIndex]);
+
   const handlePreviousStep = useCallback(() => {
-    setCurrentStep(prev => Math.max(0, prev - 1));
-  }, []);
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
+  }, [currentStepIndex, setCurrentStepIndex]);
 
   const handleNextStep = useCallback(() => {
-    setCurrentStep(prev => Math.min(cells.length - 1, prev + 1));
-  }, [cells.length]);
-
-  useEffect(() => {
-    if (lastAddedCellId) {
-      const cellElement = document.getElementById(`cell-${lastAddedCellId}`);
-      cellElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setLastAddedCellId(null);
+    const totalSteps = getTotalSteps();
+    if (currentStepIndex < totalSteps - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
     }
-  }, [lastAddedCellId]);
+  }, [currentStepIndex, getTotalSteps, setCurrentStepIndex]);
 
+  const handleModeChange = useCallback((mode) => {
+    if (mode === 'step' && !currentPhaseId && tasks.length > 0) {
+      // If switching to step mode and no phase is selected, select the first available phase
+      const firstTask = tasks[0];
+      if (firstTask.phases.length > 0) {
+        setCurrentPhase(firstTask.phases[0].id);
+      }
+    }
+    setViewMode(mode);
+    setCurrentCell(null);
+  }, [setViewMode, setCurrentCell, setCurrentPhase, tasks, currentPhaseId]);
 
   const renderCell = useCallback((cell) => {
     if (!cell) return null;
@@ -204,7 +283,7 @@ const NotebookApp = () => {
       onUpdate: updateCell,
       className: "w-full",
       viewMode,
-      isNewCell: cell.isNewCell // 传递新建标记
+      isNewCell: cell.isNewCell
     };
 
     switch (cell.type) {
@@ -219,61 +298,144 @@ const NotebookApp = () => {
     }
   }, [viewMode, deleteCell, updateCell]);
 
-  const renderStepContent = useCallback(() => {
+  const renderStepNavigation = useCallback(() => {
+    const result = findPhaseIndex();
+    if (!result) return null;
+
+    const { task, phaseIndex } = result;
+    const currentPhase = task.phases[phaseIndex];
+    const isFirstPhase = phaseIndex === 0;
+    const isLastPhase = phaseIndex === task.phases.length - 1;
+
+    return (
+      <StepNavigation
+        currentPhase={currentPhase}
+        currentStepIndex={currentStepIndex}
+        totalSteps={getTotalSteps()}
+        onPrevious={handlePreviousStep}
+        onNext={handleNextStep}
+        onPreviousPhase={handlePreviousPhase}
+        onNextPhase={handleNextPhase}
+        isFirstPhase={isFirstPhase}
+        isLastPhase={isLastPhase}
+      />
+    );
+  }, [
+    findPhaseIndex,
+    currentStepIndex,
+    getTotalSteps,
+    handlePreviousStep,
+    handleNextStep,
+    handlePreviousPhase,
+    handleNextPhase
+  ]);
+
+  const renderContent = useCallback(() => {
     if (cells.length === 0) {
       return <EmptyState onAddCell={handleAddCell} />;
     }
 
-    const currentCell = cells[currentStep];
-    if (!currentCell) {
-      return null;
+    const visibleCells = getCurrentViewCells();
+
+    if (viewMode === 'step' && currentPhaseId) {
+      return (
+        <div className="h-full flex flex-col">
+          <div className="flex-1 overflow-y-auto p-12">
+            <div className="w-full max-w-screen-xl mx-auto">
+              <div className="relative space-y-4">
+                {visibleCells.map((cell) => (
+                  <div
+                    key={cell.id}
+                    id={`cell-${cell.id}`}
+                    className="relative w-full bg-white rounded-lg transition-all duration-300"
+                  >
+                    {renderCell(cell)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {renderStepNavigation()}
+        </div>
+      );
     }
 
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-y-auto p-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-medium text-gray-800">
-              Step {currentStep + 1} of {cells.length}
-            </h2>
-          </div>
-          {renderCell(currentCell)}
+      <div className="w-full max-w-screen-xl mx-auto px-4 lg:px-8">
+        <div className="relative space-y-4">
+          <empty className='h-4 w-full'></empty>
+          <CellDivider index={0} onAddCell={handleAddCell} viewMode={viewMode} />
+          {visibleCells.map((cell, index) => (
+            <React.Fragment key={cell.id}>
+              <div
+                id={`cell-${cell.id}`}
+                className="relative w-full bg-white rounded-lg"
+              >
+                {renderCell(cell)}
+              </div>
+              <CellDivider
+                index={index + 1}
+                onAddCell={handleAddCell}
+                viewMode={viewMode}
+              />
+            </React.Fragment>
+          ))}
         </div>
-        <StepNavigation 
-          currentStep={currentStep}
-          totalSteps={cells.length}
-          onPrevious={handlePreviousStep}
-          onNext={handleNextStep}
-        />
       </div>
     );
-  }, [cells, currentStep, handleAddCell, renderCell, handlePreviousStep, handleNextStep]);
+  }, [
+    cells.length,
+    viewMode,
+    currentPhaseId,
+    getCurrentViewCells,
+    handleAddCell,
+    renderCell,
+    renderStepNavigation
+  ]);
+
+  useEffect(() => {
+    if (lastAddedCellId) {
+      const cellElement = document.getElementById(`cell-${lastAddedCellId}`);
+      cellElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setLastAddedCellId(null);
+    }
+  }, [lastAddedCellId]);
+
+  // Effect to handle initial phase selection when switching to step mode
+  useEffect(() => {
+    if (viewMode === 'step' && !currentPhaseId && tasks.length > 0) {
+      const firstTask = tasks[0];
+      if (firstTask.phases.length > 0) {
+        setCurrentPhase(firstTask.phases[0].id);
+        setCurrentStepIndex(0);
+      }
+    }
+  }, [viewMode, currentPhaseId, tasks, setCurrentPhase, setCurrentStepIndex]);
 
   return (
     <div className="h-screen flex bg-white">
-      <div className={`
-        ${isCollapsed ? 'w-16' : 'w-96'} 
-        transition-all duration-300 ease-in-out relative
-      `}>
+      <div className={`${isCollapsed ? 'w-16' : 'w-96'} transition-all duration-300 ease-in-out relative`}>
         <OutlineSidebar
+          tasks={tasks}
+          currentPhaseId={currentPhaseId}
+          currentStepIndex={currentStepIndex}
           isCollapsed={isCollapsed}
-          currentStep={currentStep}
-          onStepSelect={setCurrentStep}
+          onPhaseSelect={setCurrentPhase}
           onToggleCollapse={() => setIsCollapsed(prev => !prev)}
+          viewMode={viewMode}
         />
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 flex items-center justify-between px-6">
+        <header className="h-16 flex items-center justify-between px-6 border-b border-gray-200">
           <div className="flex items-center gap-4">
-            <ModeToggle viewMode={viewMode} onModeChange={setViewMode} />
+            <ModeToggle viewMode={viewMode} onModeChange={handleModeChange} />
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={handleRunAll}
-              className="flex items-center gap-2 px-4 py-2 text-base font-medium
-                hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-base font-medium hover:bg-gray-100 rounded-lg transition-colors"
               disabled={cells.length === 0}
             >
               <Play size={20} />
@@ -281,8 +443,7 @@ const NotebookApp = () => {
             </button>
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 
-                rounded-lg hover:bg-gray-50 transition-colors text-base"
+              className="flex items-center gap-2 px-4 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-base"
               disabled={cells.length === 0}
             >
               <Save size={20} />
@@ -291,35 +452,8 @@ const NotebookApp = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent 
-          scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300 scroll-smooth">
-          {cells.length === 0 ? (
-            <EmptyState onAddCell={handleAddCell} />
-          ) : viewMode === 'step' ? (
-            renderStepContent()
-          ) : (
-            <div className="w-full max-w-screen-xl mx-auto px-4 lg:px-8">
-              <div className="relative space-y-4">
-                <empty className='h-4 w-full'></empty>
-                <CellDivider index={0} onAddCell={handleAddCell} viewMode={viewMode} />
-                {cells.map((cell, index) => (
-                  <React.Fragment key={cell.id}>
-                    <div
-                      id={`cell-${cell.id}`}
-                      className="relative w-full bg-white rounded-lg"
-                    >
-                      {renderCell(cell)}
-                    </div>
-                    <CellDivider 
-                      index={index + 1}
-                      onAddCell={handleAddCell}
-                      viewMode={viewMode}
-                    />
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300 scroll-smooth">
+          {renderContent()}
         </div>
 
         {error && (
